@@ -1,0 +1,203 @@
+\section{Formal assumptions and notation}
+The finite query set is $\mathcal Q=\mathcal X\times[m]$. At every time, the query is measurable with respect to past observations and fresh private randomness. Conditional on that query and history, the outcome has law $P_\theta^q$ and is independent of previous outcomes. All kernels have a common finite strictly positive support, so every log-likelihood increment is bounded in absolute value by a finite instance-dependent constant. A stopped transcript includes the queries, outcomes, stopping time, and output. The algorithm, including its randomization and stopping rule, is the same under every candidate parameter. Thus query-selection probabilities cancel in likelihood ratios. Natural logarithms are used throughout.
+
+The required set $R$ is fixed before calibration. Its answer $d_R$ is a unique partial mapping, although multiple full parameters have that answer. This is a single-correct-answer identification problem at the level of the quotient answer space. It is not the most general multiple-correct-policy problem. The generic certificate in Equation~\eqref{eq:policy} remains valid for that broader problem, but the optimality theorem is not claimed for it.
+
+\section{Information lower bound}\label{app:lower}
+\begin{proof}[Proof of Theorem~\ref{thm:lower}]
+Fix a true parameter $\theta$ and an alternative $\lambda\in\Alt_R(\theta)$. Write $N_q(\tau)$ for the query count. If $\E_\theta\tau=\infty$, the asserted lower bound is immediate. Otherwise, bounded log-likelihood increments and the stopped likelihood chain rule give
+\begin{equation}
+\KL(\mathsf P_\theta^{\rm transcript}\Vert\mathsf P_\lambda^{\rm transcript})
+=\E_\theta\!\left[\ell_\tau(\theta)-\ell_\tau(\lambda)\right]
+=\sum_q\E_\theta N_q(\tau)\KL(P_\theta^q\Vert P_\lambda^q). \label{eq:stoppedkl}
+\end{equation}
+For completeness, the final equality follows by writing the stopped sum as $\sum_{t\ge1}\mathbf1\{\tau\ge t\}\log(P_\theta^{q_t}(Y_t)/P_\lambda^{q_t}(Y_t))$, conditioning on the pre-outcome history and query, and exchanging expectation and sum. The absolute expectation is bounded by a constant times $\E_\theta\tau$.
+
+Let $A$ be the event that the returned answer equals $d_R(\theta)$. Correctness gives $\mathsf P_\theta(A)\ge1-\delta$ and $\mathsf P_\lambda(A)\le\delta$. By data processing to $\mathbf1_A$, and monotonicity of binary relative entropy when the first argument exceeds the second,
+\begin{equation}
+\sum_q\E_\theta N_q(\tau)\KL(P_\theta^q\Vert P_\lambda^q)
+\ge\kl(1-\delta,\delta).
+\end{equation}
+Normalize $w_q=\E_\theta N_q(\tau)/\E_\theta\tau$. The inequality holds for every task-changing alternative. Minimizing over these alternatives and upper-bounding the resulting rate by $D_R^*(\theta)$ proves Equation~\eqref{eq:lower}. If one such alternative has identical query laws, the left side is zero and contradicts $\kl(1-\delta,\delta)>0$.
+\end{proof}
+This is the standard stopped change-of-measure argument specialized to the partial-permutation answer; see \citet{kaufmann2016} for the general identification method.
+
+\section{Cycle structure and computation}\label{app:cycles}
+\begin{proof}[Detailed proof of Theorem~\ref{thm:cycles}]
+For an alternative $\lambda$, set $\sigma(i)=\lambda(\theta^{-1}(i))$. Reindexing the commands by their true effects yields
+\begin{align}
+\sum_{x,a}w_{x,a}\KL(P_{\theta(a)}^x\Vert P_{\lambda(a)}^x)
+&=\sum_i\sum_xw_{x,\theta^{-1}(i)}\KL(P_i^x\Vert P_{\sigma(i)}^x)\\
+&=\sum_i c_{i,\sigma(i)}^\theta(w).
+\end{align}
+For $r\in R$, equality $\lambda^{-1}(r)=\theta^{-1}(r)$ is equivalent to $\lambda(\theta^{-1}(r))=r$, hence to $\sigma(r)=r$. Therefore $\lambda\in\Alt_R(\theta)$ exactly when the cycle decomposition of $\sigma$ contains a nontrivial cycle touching $R$.
+
+All edge costs are nonnegative. Removing every cycle except one relevant cycle cannot increase total cost. Conversely, extend any relevant simple cycle by fixing all other vertices. The resulting permutation belongs to the alternative set and has exactly that cycle's cost. This proves equality of the two minima, including zero-cost or tied cases.
+
+Introduce a variable $z$ for the worst-alternative information rate. For each relevant cycle $C$, impose
+\begin{equation}
+z\le\sum_{(i,j)\in C}\sum_xw_{x,\theta^{-1}(i)}\KL(P_i^x\Vert P_j^x),\qquad w\in\Delta(\mathcal Q).
+\end{equation}
+Maximizing $z$ is the desired LP. Given a tentative $w$, all-pairs shortest-path distances in the nonnegative complete directed cost graph give the minimum relevant nontrivial cycle as
+\begin{equation}
+\min_{r\in R}\min_{j\ne r}\{c_{rj}+\operatorname{dist}(j,r)\}.
+\end{equation}
+A shortest return path can be chosen simple: deleting a repeated-vertex subpath does not increase cost. It cannot visit $r$ before its endpoint. Thus prepending $(r,j)$ gives a valid simple relevant cycle. Computing distances costs $O(m^3)$ and inspecting the candidate roots costs $O(|R|m)$. Costs themselves require $O(|\mathcal X|m^2|\mathcal Y|)$ arithmetic operations if divergences are not precomputed.
+
+Our cutting-plane implementation starts from relevant two-cycles, repeatedly solves the current LP, and adds a violated shortest cycle. It terminates after finitely many distinct cuts in exact arithmetic. We do not claim a polynomial bound on this particular cutting-plane iteration count. The polynomial-time separation oracle is a structural property; generic LP oracle reductions require their usual precision assumptions. Floating-point tests compare attained objectives, not only solver-reported objective values.
+\end{proof}
+
+\begin{corollary}[Task monotonicity]
+If $R_1\subseteq R_2$, then $D_{R_1}^*(\theta)\ge D_{R_2}^*(\theta)$. Equality holds when their alternative sets coincide, including $R_1=R_2=[m]$.
+\end{corollary}
+\begin{proof}
+Every cycle touching $R_1$ also touches $R_2$. The minimization has more constraints for $R_2$, so its optimal value cannot increase.
+\end{proof}
+
+\section{Full versus task grounding}\label{app:separation}
+\begin{proof}[Proof of Theorem~\ref{thm:separation}]
+At a diagnostic context, let $P_j$ be the product of two Bernoulli laws with parameter pairs
+\begin{equation}
+(.8,.5),\quad(.2,.8),\quad(.2,.5-\gamma),\quad(.2,.5+\gamma).
+\end{equation}
+They all have a common strictly positive support. Other allowed calibration contexts may independently pass each bit through a binary noise channel, replacing a parameter $p$ by $.5+s(p-.5)$ with $0\le s\le1$. These channels can only decrease relative entropy.
+
+For any true $\theta$, form $\lambda$ by swapping the effects assigned to its commands for effects $2$ and $3$. This changes the full mapping and leaves $d_{\{0,1\}}$ unchanged. Queries to other commands have zero relative entropy. Queries to either swapped command at the strongest context have relative entropy
+\begin{align}
+k_\gamma
+&=\KL(\operatorname{Ber}(.5-\gamma)\Vert\operatorname{Ber}(.5+\gamma))\\
+&=(.5-\gamma)\log\frac{.5-\gamma}{.5+\gamma}
+ +(.5+\gamma)\log\frac{.5+\gamma}{.5-\gamma}\\
+&=2\gamma\log\frac{.5+\gamma}{.5-\gamma}.
+\end{align}
+The reverse divergence is equal by symmetry. Every allowed query therefore has divergence at most $k_\gamma$ for this pair of full mappings. Equation~\eqref{eq:stoppedkl} proves $\E\tau_{\rm full}\ge\kl(1-\delta,\delta)/k_\gamma$. A Taylor expansion gives $k_\gamma=8\gamma^2+O(\gamma^4)$.
+
+For task grounding, sample each of the four commands $n=\lceil32\log(16/\delta)\rceil$ times at the strongest context. Estimate both bit means for each command. Hoeffding's inequality and a union bound over eight means give
+\begin{equation}
+\Prob\left(\max_{a,b}|\widehat p_{a,b}-p_{\theta(a),b}|\ge1/8\right)
+\le16e^{-n/32}\le\delta.
+\end{equation}
+On the complementary event, effect $0$ is the unique command with first-bit mean above $.5$. For $\gamma\le .05$, effect $1$ is the unique command with second-bit mean above $.675$, since its true parameter is $.8$ while every other second-bit parameter is at most $.55$. When no unique threshold assignment exists, return any fixed answer; that possibility is already covered by the failure event. Thus $4n$ queries suffice uniformly in $\gamma$.
+
+To embed control, adjoin a chain with states $0,\ldots,H$, an absorbing failure state, and required effects $0,1,0,1,\ldots$. The same unknown permutation determines which command realizes every latent effect in diagnostic and deployment contexts. Each correct effect advances with $p_g$ and every other effect with $p_b$. Calibration access is restricted to the diagnostic contexts. The model includes both diagnostic outcomes and chain dynamics, but the latter are not extra free calibration observations. Any deterministic policy misgrounding a required stage has value at most $p_b p_g^{H-1}$, proving the gap in Equation~\eqref{eq:gap}. Since both required effects occur when $H\ge2$, the decoded task answer is exactly the information needed to implement the optimal chain policy.
+\end{proof}
+
+\paragraph{Noiseless check.}
+If each diagnostic outcome exactly reveals its effect, $m-1$ distinct command queries identify the full permutation, and $m-1$ are necessary in the worst case: two unqueried commands can still be exchanged. With $c$ independent components and exact known correspondences inside each, the analogous full-identification count is $c(m-1)$. These are elementary checks, not noisy finite-sample results or novelty claims. Even a single required effect can take $m-1$ noiseless queries in the worst case; task relevance does not always reduce worst-case counts.
+
+\section{Anytime confidence and task certificates}\label{app:certificate}
+\begin{proof}[Proof of Proposition~\ref{prop:certificate}]
+For a false candidate $\lambda$, let
+\begin{equation}
+L_t^\lambda=\exp(\ell_t(\lambda)-\ell_t(\theta)).
+\end{equation}
+Conditioning on history and the selected query, the conditional expectation of its likelihood-ratio multiplier is
+$\sum_yP_\theta^q(y)P_\lambda^q(y)/P_\theta^q(y)=1$. Hence $L_t^\lambda$ is a nonnegative mean-one martingale under the true model, including adaptive and randomized query selection. Ville's inequality gives
+$\Prob_\theta(\sup_tL_t^\lambda>e^{B_\delta})\le e^{-B_\delta}$.
+
+If $\theta\notin\mathcal H_t$, some $\lambda\ne\theta$ has $L_t^\lambda>e^{B_\delta}$. A union bound over the $M-1$ false candidates proves the uniform coverage claim. On that coverage event, every answer certified as constant on $\mathcal H_t$ must equal the true answer. The same event validates any common policy satisfying Equation~\eqref{eq:policy}, even when that policy is selected adaptively from the data. No termination claim is needed for the validity of a certificate; termination for TDG follows from the next theorem.
+\end{proof}
+Time-uniform supermartingale reasoning is standard; see \citet{howard2018}. The constant threshold is possible here because the hypothesis family is finite and every likelihood is fully specified. It should not be reused without correction when effect kernels are estimated from the calibration data itself.
+
+\section{Expected-time asymptotic optimality}\label{app:upper}
+\begin{proof}[Proof of Theorem~\ref{thm:upper}]
+We analyze the infinite query process that follows Equation~\eqref{eq:algorithm} even after the potential stopping time. Fix $\theta$. For $\lambda\ne\theta$, define the per-query Hellinger deficit
+\begin{equation}
+h_{\theta\lambda}(q)=1-\sum_y\sqrt{P_\theta^q(y)P_\lambda^q(y)},\qquad
+\bar h_{\theta\lambda}=|\mathcal Q|^{-1}\sum_qh_{\theta\lambda}(q).
+\end{equation}
+Full pairwise distinguishability implies $\eta:=\min_{\lambda\ne\theta}\bar h_{\theta\lambda}>0$. Conditional on the history, the query law assigns at least $t^{-1/2}/|\mathcal Q|$ mass to every query. Therefore
+\begin{align}
+\E_\theta\left[\sqrt{L_t^\lambda}\mid\mathcal F_{t-1}\right]
+&\le\sqrt{L_{t-1}^\lambda}(1-t^{-1/2}\bar h_{\theta\lambda}),\\
+\E_\theta\sqrt{L_t^\lambda}
+&\le\exp\left(-\bar h_{\theta\lambda}\sum_{s=1}^t s^{-1/2}\right).
+\end{align}
+If the maximum-likelihood estimate is not $\theta$, at least one false likelihood is as large as the true one. Markov's inequality and a union bound yield constants $A,a>0$, depending on the fixed instance but not on $\delta$, such that
+\begin{equation}
+\Prob_\theta(\hat\theta_t\ne\theta)\le A e^{-a\sqrt t}. \label{eq:mletail}
+\end{equation}
+Thus errors are summable and the MLE is eventually correct almost surely. In particular, for an integer $u\ge1$,
+\begin{equation}
+\Prob_\theta(\exists s\ge u:\hat\theta_s\ne\theta)
+\le A'(\sqrt u+1)e^{-a'\sqrt u} \label{eq:latemle}
+\end{equation}
+for fixed positive constants $A',a'$.
+
+For $\lambda\in\Alt_R(\theta)$, write
+\begin{equation}
+Z_t^\lambda=\ell_t(\theta)-\ell_t(\lambda)
+=\sum_{s=1}^t\mu_s^\lambda+M_t^\lambda,
+\end{equation}
+where $\mu_s^\lambda=\E_\theta[Z_s^\lambda-Z_{s-1}^\lambda\mid\mathcal F_{s-1}]$ and $M_t^\lambda$ is a martingale. Finiteness and positive support provide $K<\infty$ with every log-likelihood increment bounded by $K$ in absolute value. The martingale increments are bounded by $2K$. All predictable means are nonnegative. Whenever $\hat\theta_{s-1}=\theta$,
+\begin{equation}
+\mu_s^\lambda\ge(1-s^{-1/2})\sum_qw_q^*(\theta)\KL(P_\theta^q\Vert P_\lambda^q)
+\ge(1-s^{-1/2})D_R^*(\theta).
+\end{equation}
+Let $D=D_R^*(\theta)>0$. On the event that all MLEs from time $u$ onward are correct,
+\begin{equation}
+\sum_{s=1}^t\mu_s^\lambda\ge D(t-u-2\sqrt t-2),\qquad t>u. \label{eq:drift}
+\end{equation}
+
+Fix $\zeta>0$ and set $\alpha=\zeta/[4(1+\zeta)]$, $u=\lceil\alpha t\rceil$. For all sufficiently large $t$ with $t\ge(1+\zeta)B_\delta/D$, Equation~\eqref{eq:drift} exceeds $B_\delta+\kappa t$ for some fixed $\kappa>0$ depending on $D,\zeta$ but not on $\delta$. For example, once the square-root and integer terms are absorbed, one may take $\kappa=D\zeta/[2(1+\zeta)]$.
+
+If $Z_t^\lambda>B_\delta$ for every task-changing alternative, all those alternatives lie outside $\mathcal H_t$ because $\max_h\ell_t(h)\ge\ell_t(\theta)$. The set is nonempty and has a single task answer, so the stopping time is at most $t$. Combining Equation~\eqref{eq:latemle} and Azuma's inequality gives, in the stated range,
+\begin{equation}
+\Prob_\theta(\tau_\delta>t)
+\le A''(\sqrt t+1)e^{-a''\sqrt t}
++|\Alt_R(\theta)|\exp\left(-\frac{\kappa^2t}{8K^2}\right). \label{eq:stoppingtail}
+\end{equation}
+Both sequences are summable, which establishes finite expectation and almost-sure termination. More precisely, summing the tail after $\lceil(1+\zeta)B_\delta/D\rceil$ yields an $o(B_\delta)$ contribution as $\delta\downarrow0$. Hence
+\begin{equation}
+\limsup_{\delta\downarrow0}\frac{\E_\theta\tau_\delta}{\log(1/\delta)}\le\frac{1+\zeta}{D}.
+\end{equation}
+Let $\zeta\downarrow0$. Theorem~\ref{thm:lower}, together with $\kl(1-\delta,\delta)/\log(1/\delta)\to1$, gives the matching lower limit. Proposition~\ref{prop:certificate} supplies $\delta$-correctness.
+\end{proof}
+The argument follows the architecture of controlled sequential hypothesis testing \citep{nitinawarat2012}. The full-identifiability assumption is stronger than necessary for task correctness and can be inefficient in nearly indistinguishable nuisance directions. It is used to obtain eventual full-MLE stabilization for this simple allocation rule, not because the task certificate needs full identification.
+
+\subsection{A finite-time fixed-design companion}
+\begin{proposition}[Task-only Hellinger upper bound]\label{prop:finite}
+Draw calibration queries independently from a fixed $w$. Let
+\begin{equation}
+h_R(\theta,w)=\min_{\lambda\in\Alt_R(\theta)}\sum_qw_qh_{\theta\lambda}(q)>0,
+\qquad K_R=|\Alt_R(\theta)|.
+\end{equation}
+Use the same task certificate. For every integer $n$,
+\begin{equation}
+\Prob_\theta(\tau>n)\le\min\{1,K_R\exp(B_\delta/2-nh_R(\theta,w))\}.
+\end{equation}
+In particular, with $n_0=\lceil(B_\delta/2+\log K_R)/h_R\rceil$,
+$\E_\theta\tau\le n_0+(1-e^{-h_R})^{-1}$.
+\end{proposition}
+\begin{proof}
+If $\tau>n$, some task-changing alternative has $Z_n^\lambda\le B_\delta$. Markov's inequality applied to $e^{-Z_n^\lambda/2}$ bounds this probability by $e^{B_\delta/2}(1-\sum_qw_qh_{\theta\lambda}(q))^n\le e^{B_\delta/2-nh_R}$. Union-bound over alternatives and sum the resulting geometric tail. Unlike Theorem~\ref{thm:upper}, this proposition needs no distinguishability between parameters with the same task answer.
+\end{proof}
+
+\section{Context components}\label{app:components}
+\begin{proof}[Proof of Corollary~\ref{cor:components}]
+The parameter is $\boldsymbol\theta=(\theta_1,\ldots,\theta_c)$ and the answer is the tuple of local task answers. A query in component $k$ depends only on $\theta_k$. Fix $k$ and compare the truth to alternatives that change only that component's answer. The stopped KL identity then contains only queries in component $k$. Normalize the expected counts in that component to obtain
+\begin{equation}
+\E_{\boldsymbol\theta}\tau_k\ge\frac{\kl(1-\delta,\delta)}{D_k^*}.
+\end{equation}
+Summing over components gives the lower bound, since $\tau=\sum_k\tau_k$. For an upper bound, run the local TDG procedures, each with error budget $\delta/c$, in any sequential order. A union bound gives joint correctness. Theorem~\ref{thm:upper} and fixed $c$ imply
+\begin{equation}
+\frac{\sum_k\E\tau_k(\delta/c)}{\log(1/\delta)}\longrightarrow\sum_k\frac1{D_k^*}.
+\end{equation}
+Known relative correspondences are needed to define a common local effect coordinate system. No result in this proof estimates those correspondences or their graph from observations.
+\end{proof}
+
+\section{Robustness to nominal likelihood error}\label{app:robust}
+\begin{proof}[Proof of Proposition~\ref{prop:robust}]
+Condition on a pretrained model and a valid uniform log-error bound. For every candidate,
+$|\widehat\ell_t(\theta)-\ell_t(\theta)|\le E_t$. Therefore, if a false candidate exceeds the true nominal log-likelihood by more than $B_\delta+2E_t$, it exceeds the true exact log-likelihood by more than $B_\delta$. Excluding the true mapping from the robust confidence set implies one of the exact likelihood martingales crossed $e^{B_\delta}$. The same union bound as Proposition~\ref{prop:certificate} gives probability at most $\delta$. Conditioning on an independent pretraining data set for which the uniform bound holds with probability at least $1-\beta$, and adding its failure probability, gives $\delta+\beta$.
+
+For the deployment statement, couple true and nominal transitions using maximal couplings at each step. Uniform total variation at most $\rho$ bounds the probability that the two trajectories ever disagree by $H\rho$ (or one if this exceeds one). Since the terminal reward is in $[0,1]$, every fixed policy's value differs by at most $H\rho$. The optimal values differ by the same amount by taking a supremum over the common executable policy class. For a selected policy $\pi$,
+\begin{equation}
+V_\theta^*-V_\theta^\pi
+\le\widehat V_\theta^*-\widehat V_\theta^\pi+2H\rho.
+\end{equation}
+This inequality is pointwise in every policy, so it remains valid for a data-dependent policy on the robust coverage event. A nominal common-policy regret at most $\varepsilon-2H\rho$ completes the proof. When that tolerance is negative, this sufficient certificate cannot be issued.
+\end{proof}
+
+\paragraph{Why the correction can prevent stopping.}
+For a fixed allocation $w$ and alternative $\lambda$, the exact expected log-likelihood ratio per query is $\sum_qw_q\KL(P_\theta^q\Vert P_\lambda^q)$. Replacing both terms in the ratio by nominal ones lowers this mean by at most $2\bar\eta_w$, where $\bar\eta_w=\sum_qw_q\eta_q$. The threshold grows at rate $2\bar\eta_w$. The strong law for i.i.d. query--outcome pairs therefore provides a sufficient positive drift of $I_R(\theta,w)-4\bar\eta_w$. If it is positive, each task-changing alternative is eventually excluded almost surely under that fixed design. A nonpositive lower bound is not an impossibility theorem; the correction can be loose. The robust experiments deliberately retain this conservative correction instead of interpreting failure to stop as successful identification.

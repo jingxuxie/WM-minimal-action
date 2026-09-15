@@ -1,0 +1,223 @@
+\documentclass{article}
+\usepackage{iclr2027_conference,times}
+\usepackage{amsmath,amssymb,amsthm,booktabs,graphicx,xcolor,hyperref,etoolbox}
+\usepackage[T1]{fontenc}
+\hypersetup{hidelinks}
+\makeatletter
+\patchcmd{\@maketitle}{Under review as a conference paper at ICLR 2027}{Research manuscript --- not submitted}{}{}
+\patchcmd{\@maketitle}{Paper under double-blind review}{Draft prepared for independent review}{}{}
+\makeatother
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newcommand{\KL}{\operatorname{KL}}
+\newcommand{\kl}{\operatorname{kl}}
+\newcommand{\E}{\mathbb E}
+\newcommand{\Prob}{\mathbb P}
+\newcommand{\Alt}{\operatorname{Alt}}
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\title{Grounding Only What Matters:\\Task-Relevant Permutation Cycles in\\Latent-Action World Models}
+\author{Anonymous authors}
+\date{}
+\begin{document}
+\maketitle
+\lhead{Research manuscript --- not submitted}
+\begin{abstract}
+A world model can predict latent action effects without knowing which executable commands produce them. We study the additional interaction needed to ground only the effects required by a task. For a finite family of known latent transition kernels with an unknown shared command permutation, we characterize the optimal fixed-confidence information rate through directed permutation cycles that intersect the required effect set. This reduces experimental-design separation to a shortest-cycle problem and shows how task-required commands can be identified indirectly through the bijection. A likelihood confidence set supports task-sufficient stopping; a specialization of controlled sequential testing attains the information lower bound asymptotically. We construct multistep tasks for which full grounding costs $\Omega(\gamma^{-2}\log(1/\delta))$ while task grounding costs $O(\log(1/\delta))$, where $\gamma$ distinguishes irrelevant effects. We also derive a direct-sum law for independently aligned context components and a conservative model-error correction. Across 15,800 synthetic calibration runs, task-directed calibration separates sharply from full identification, but entropy sampling is competitive and faster at ordinary confidence. Estimated categorical kernels and deliberately inconsistent contexts reveal both invalid uncorrected certificates and substantial conservatism in robust certification. The results isolate the interaction cost of command grounding, conditional on useful latent effects and resettable diagnostic access, rather than solving representation discovery from arbitrary video.
+\end{abstract}
+
+\section{Introduction}
+Learning a predictive effect and learning how to invoke it are different problems. A passive model may represent motion north, south, east, and west, yet not know the robot commands that realize those effects. Latent-policy and latent-action methods already address this distinction through a small amount of labeled interaction \citep{edwards2019,schmidt2023}. Recent identifiability results recover latent dynamics up to permutation under demonstrator diversity, and effect-alignment methods address inconsistent semantics across contexts \citep{schur2026,jiang2026}. The question here is not whether permutation ambiguity exists. It is \emph{which remaining ambiguities justify spending another calibration interaction}.
+
+Full command identification can be unnecessarily demanding. Two visually distinguishable effects may be interchangeable for a task, or never be used by its latent policy. Conversely, information about an unused command can reveal a required command through the one-to-one mapping. Task relevance therefore does not justify simply discarding irrelevant actions from the calibration query space.
+
+We formalize this tension in a restricted, auditable setting: finite latent effect kernels, a shared unknown permutation, resettable calibration contexts, and a known set of effects required by a downstream policy. Our main structural observation is that a competing command permutation is a collection of directed cycles. Only cycles intersecting the task-required effects can invalidate their grounding. This yields an exact task-dependent information-design problem with a shortest-cycle separation oracle.
+
+Our statistical lower bound, likelihood-ratio confidence sets, and asymptotic adaptive testing argument specialize established controlled-sensing and pure-exploration tools \citep{nitinawarat2012,kaufmann2016,garivier2016}. The proposed contribution is the \emph{task-relevant permutation structure}, its consequences for experimental design and context alignment, and a controlled analysis of the gap between full and sufficient grounding. We do not claim that generic active hypothesis testing or latent-action calibration is new. Our experiments are mechanism tests, including strong baselines and failure cases, rather than evidence of state-of-the-art visual control.
+
+\section{Conditional command grounding}
+Let $\mathcal X$ be a finite set of calibration contexts, $\mathcal A=[m]$ the executable commands, and $P_j^x$ a distribution on a finite outcome alphabet $\mathcal Y$ for effect $j\in[m]$ in context $x$. Initially, the kernels are known, strictly positive, and share a common support. The unknown parameter $\theta\in\Theta=S_m$ is a bijection from commands to effects. A resettable query $q=(x,a)$ produces
+\begin{equation}
+Y\sim P_\theta^q:=P_{\theta(a)}^x. \label{eq:model}
+\end{equation}
+An adaptive algorithm chooses queries from prior observations and private randomness, stops at $\tau$, and outputs an answer. Calibration queries do not include the cost of navigating to $x$.
+
+For a fixed nonempty required effect set $R$, define
+\begin{equation}
+d_R(\theta)=(\theta^{-1}(r))_{r\in R},\qquad
+\Alt_R(\theta)=\{\lambda:d_R(\lambda)\ne d_R(\theta)\}. \label{eq:answer}
+\end{equation}
+A rule is $\delta$-correct if it stops almost surely and outputs $d_R(\theta)$ with probability at least $1-\delta$, for every $\theta$. Full grounding sets $R=[m]$. A capped implementation may instead abstain; its certificate remains valid, but the capped procedure is not an almost-sure identification algorithm.
+
+\paragraph{Connection to control.}
+Suppose a known latent policy uses only effects in $R$. Recovering $d_R$ makes that policy executable without identifying other commands. Our experimental deployment environment is an $H$-stage chain. At stage $h$, the required latent effect $r_h\in R$ advances with probability $p_g$; every other effect advances with $p_b<p_g$; failure terminates the episode with reward zero. Completing the chain gives reward one. The optimal value is $p_g^H$. Any deterministic policy wrong at a visited stage has regret at least
+\begin{equation}
+g_H=(p_g-p_b)p_g^{H-1}. \label{eq:gap}
+\end{equation}
+When the sequence covers $R$ and $\varepsilon<g_H$, grounding $d_R$ is equivalent to producing an $\varepsilon$-optimal deterministic chain policy. This equivalence is not asserted for arbitrary tasks with multiple acceptable policies; those require a more general answer formulation \citep{degenne2019}.
+
+\paragraph{What is supplied.}
+The latent kernels, required effect identities, task dynamics, and relative effect correspondences inside an aligned context component are inputs. A uniform passive command policy gives $m^{-1}\sum_jP_j^x$, independent of $\theta$, so additional data from that passive process alone cannot ground command labels. Recovering the effect kernels from general passive data is a separate identifiability problem \citep{schur2026,nikulin2025}. Section~\ref{sec:learned} examines estimated kernels under an explicit, strong anonymous-demonstrator assumption.
+
+\section{Task-relevant information geometry}
+For a distribution $w$ over allowed queries, let
+\begin{align}
+I_R(\theta,w)&=\min_{\lambda\in\Alt_R(\theta)}\sum_qw_q\KL(P_\theta^q\Vert P_\lambda^q),\\
+D_R^*(\theta)&=\max_{w\in\Delta(\mathcal X\times\mathcal A)}I_R(\theta,w). \label{eq:rate}
+\end{align}
+The following standard change-of-measure specialization identifies the relevant statistical scale; a self-contained proof appears in Appendix~\ref{app:lower}.
+\begin{theorem}[Information lower bound]\label{thm:lower}
+For $0<\delta<1/2$, every $\delta$-correct rule with finite expected stopping time satisfies
+\begin{equation}
+\E_\theta\tau\ge\frac{\kl(1-\delta,\delta)}{D_R^*(\theta)}. \label{eq:lower}
+\end{equation}
+If a decision-changing alternative is observationally indistinguishable for every allowed query, no such finite-expectation rule exists.
+\end{theorem}
+The novelty question is therefore whether the command structure gives a sharper and more computable characterization of $D_R^*$ than generic hypothesis enumeration.
+
+\subsection{Only cycles touching required effects matter}
+Relabel a competing permutation as $\sigma=\lambda\circ\theta^{-1}$, acting on effect identities. Define the directed cost matrix
+\begin{equation}
+c_{ij}^{\theta}(w)=\sum_xw_{x,\theta^{-1}(i)}\KL(P_i^x\Vert P_j^x),\quad c_{ii}^{\theta}=0. \label{eq:cost}
+\end{equation}
+Let $\mathcal C_R$ contain simple directed cycles of length at least two whose vertices intersect $R$.
+\begin{theorem}[Task-relevant cycle characterization]\label{thm:cycles}
+For every $\theta$ and $w$,
+\begin{equation}
+I_R(\theta,w)=\min_{C\in\mathcal C_R}\sum_{(i,j)\in C}c_{ij}^{\theta}(w). \label{eq:cycles}
+\end{equation}
+Consequently $D_R^*$ is the optimum of a linear program with one inequality per relevant cycle. Given $w$, a most violated inequality can be found using all-pairs shortest paths in $O(m^3+|R|m)$ arithmetic operations after computing the costs.
+\end{theorem}
+\begin{proof}
+The weighted divergence against $\lambda$ equals $\sum_i c_{i,\sigma(i)}^{\theta}$. The answer changes exactly when $\sigma$ moves some $r\in R$. Decompose $\sigma$ into disjoint cycles. Its cost is at least that of one nontrivial cycle touching $R$, because all costs are nonnegative. Conversely, any such cycle, with all other vertices fixed, is a decision-changing permutation. For the oracle, minimize $c_{rj}+\operatorname{dist}(j,r)$ over $r\in R,j\ne r$. Nonnegative costs permit a simple shortest return path.
+\end{proof}
+The oracle avoids enumerating $m!$ alternatives for design. Our implementation adds violated cycle constraints and checks it against the full alternative LP. This is a design result, not an end-to-end polynomial-time inference claim: the reference likelihood implementation still enumerates permutations.
+
+\paragraph{Indirect grounding.}
+The cost of a cycle depends on every command on that cycle, not only commands mapped into $R$. An optimal design can place zero mass on a required command while determining it by elimination. In our four-effect example at $\gamma=.02$, the identity-mapping task design places approximately $(0,.596,.175,.229)$ mass on commands at the strongest context. Effect $0$ is required but its own command need not receive positive asymptotic design mass. Forced exploration still samples it finitely and sublinearly.
+
+\subsection{A sharp separation from complete grounding}
+\begin{theorem}[Irrelevant-effect separation]\label{thm:separation}
+There is a four-effect family with $R=\{0,1\}$ and an $H$-stage task, for any fixed $H\ge2$, such that for $0<\gamma\le .05$:
+\begin{equation}
+\E_\theta\tau_{\rm full}\ge
+\frac{\kl(1-\delta,\delta)}{2\gamma\log((.5+\gamma)/(.5-\gamma))}, \label{eq:sepfull}
+\end{equation}
+whereas a task-grounding rule uses at most
+$4\lceil32\log(16/\delta)\rceil$ queries. Thus full grounding has an $\Omega(\gamma^{-2}\log(1/\delta))$ requirement while task grounding admits an $O(\log(1/\delta))$ bound uniform in $\gamma$.
+\end{theorem}
+The strongest context returns two independent bits with success probabilities $(.8,.5)$, $(.2,.8)$, $(.2,.5-\gamma)$, and $(.2,.5+\gamma)$ for effects $0,1,2,3$. Distinguishing effects $2$ and $3$ requires resolving a vanishing gap. Identifying effects $0$ and $1$ uses fixed gaps. Appendix~\ref{app:separation} proves the constants and embeds these diagnostic queries and the multistep task in one model with a shared permutation. This is a separation between objectives, not a claim that every task-directed sampler beats every full-identification sampler at every budget.
+
+\section{Calibrate until one answer is reliable}
+Let $M=m!$, $\ell_t(\theta)=\sum_{s\le t}\log P_\theta^{q_s}(Y_s)$, and
+\begin{equation}
+B_\delta=\log((M-1)/\delta),\qquad
+\mathcal H_t=\{\theta:\max_\lambda\ell_t(\lambda)-\ell_t(\theta)\le B_\delta\}. \label{eq:confidence}
+\end{equation}
+The set is recomputed at each time, not intersected across time. It is always nonempty.
+\begin{proposition}[Anytime task certificate]\label{prop:certificate}
+Under any adaptive query rule, $\Prob_\theta(\exists t:\theta\notin\mathcal H_t)\le\delta$. Therefore stopping once $d_R$ is constant on $\mathcal H_t$ and returning that answer has error probability at most $\delta$.
+\end{proposition}
+The proof applies Ville's inequality to each likelihood-ratio martingale and takes a union bound. No Bayesian credibility threshold is substituted for frequentist coverage. More generally, any common executable policy satisfying
+\begin{equation}
+\max_{\theta\in\mathcal H_t}(V_\theta^*-V_\theta^\pi)\le\varepsilon \label{eq:policy}
+\end{equation}
+is certified. It is essential to evaluate \emph{the same policy} under every surviving model, rather than checking each model's own optimal policy.
+
+\paragraph{Task-directed query allocation.}
+Fix a deterministic choice $w^*(h)$ of an optimal design in Equation~\eqref{eq:rate} for each candidate $h$. At time $t$, use the maximum-likelihood candidate $\hat\theta_{t-1}$ and draw
+\begin{equation}
+q_t\sim (1-t^{-1/2})w^*(\hat\theta_{t-1})+t^{-1/2}U, \label{eq:algorithm}
+\end{equation}
+where $U$ is uniform over queries. Update likelihoods and check Proposition~\ref{prop:certificate}. The known-kernel designs can be cached. We refer to this combination as TDG. The exploration term prevents permanent commitment to an initially wrong mapping.
+\begin{theorem}[Asymptotic optimality, fixed identifiable instance]\label{thm:upper}
+Assume all distinct candidate permutations are distinguishable by at least one allowed query and all kernels have a common finite strictly positive support. TDG stops almost surely, is $\delta$-correct, and
+\begin{equation}
+\lim_{\delta\downarrow0}\frac{\E_\theta\tau_\delta}{\log(1/\delta)}=\frac{1}{D_R^*(\theta)}. \label{eq:optimality}
+\end{equation}
+\end{theorem}
+This is a task-answer specialization of controlled sequential testing, not a new generic optimality principle \citep{nitinawarat2012}. Appendix~\ref{app:upper} supplies an expectation-level proof: forced exploration gives summable maximum-likelihood error tails; thereafter the task-relevant log-likelihood ratios grow at the optimal rate. Constants depend on the full instance. In particular, Equation~\eqref{eq:optimality} is not uniform as irrelevant effects become identical; Theorem~\ref{thm:separation} provides the separate uniform-in-$\gamma$ result.
+
+\subsection{Aligned context components}
+Suppose known correct correspondences align contexts inside each of $c$ components, while the components have independent unknown command permutations. Every query belongs to one component, and the task requires its specified answer in every component.
+\begin{corollary}[Direct-sum calibration cost]\label{cor:components}
+Under the assumptions of Theorem~\ref{thm:upper} in each component, with local rates $D_k^*>0$, the optimal asymptotic total calibration cost is
+\begin{equation}
+\lim_{\delta\downarrow0}\frac{\inf_{\delta\text{-correct}}\E\tau_\delta}{\log(1/\delta)}
+=\sum_{k=1}^c\frac1{D_k^*}. \label{eq:components}
+\end{equation}
+\end{corollary}
+A lower bound changes only one component at a time. An upper bound runs local rules with error budgets $\delta/c$. This formalizes the value of reliable cross-context correspondences without asserting that visual similarity supplies such correspondences.
+
+\section{What imperfect latent kernels permit}
+Suppose nominal kernels $\widehat P$ obey, uniformly over candidates and outcomes,
+\begin{equation}
+|\log\widehat P_\theta^q(y)-\log P_\theta^q(y)|\le\eta_q,
+\qquad E_t=\sum_{s\le t}\eta_{q_s}. \label{eq:logerror}
+\end{equation}
+\begin{proposition}[Robust calibration and control]\label{prop:robust}
+Replace the likelihoods in Equation~\eqref{eq:confidence} by nominal likelihoods and its threshold by $B_\delta+2E_t$. The resulting set contains the true mapping at all times with probability at least $1-\delta$. If Equation~\eqref{eq:logerror} holds on a pretraining event of probability at least $1-\beta$, the joint guarantee is $1-\delta-\beta$. If nominal deployment kernels additionally have uniform total-variation error at most $\rho$, then a nominal common-policy regret bound of $\varepsilon-2H\rho$ certifies true regret at most $\varepsilon$ for horizon-$H$ terminal rewards in $[0,1]$.
+\end{proposition}
+For a fixed query allocation $w$, nominal expected log-likelihood separation is at least true separation minus $2\sum_qw_q\eta_q$. The robust threshold pays another $2\sum_qw_q\eta_q$. A positive quantity
+\begin{equation}
+I_R(\theta,w)-4\sum_qw_q\eta_q \label{eq:robustmargin}
+\end{equation}
+is a sufficient drift margin for eliminating task-changing alternatives under that fixed allocation. This is conservative, not an optimal robustness characterization. It explains why more calibration can fail to yield a certificate when the supplied latent model is insufficiently accurate. The experiments below use simulator-known radii to isolate this issue; they do not validate a deployable radius estimator.
+
+\section{Experiments}\label{sec:experiments}
+All experiments are synthetic, CPU-based, and evaluate chain values exactly. We record 15,800 calibration runs across five suites. This count includes multiple calibration runs sharing a pretrained model; independence is not asserted across those runs. Settings, seeds, caps, raw data, and reproduction commands are specified in Appendix~\ref{app:experiments} and the accompanying package.
+
+\paragraph{Exact-model protocol.}
+We use the four-effect construction above, $H=4$, $p_g=.8$, $p_b=.2$, and $R=\{0,1\}$. One context is diagnostic; eight others shrink both Bernoulli parameters toward $.5$ by a factor $.15$. Each run draws a uniformly random command permutation. We compare task and full KL designs under both task and full stopping, uniform sampling, and full-mapping posterior entropy reduction with task stopping. Nonuniform samplers share the forced-exploration schedule. Every method receives the same kernels and reset access, and paired random streams are used within a setting. Each setting has 200 replicas, $\delta=.05$, and a 50,000-query cap.
+
+\begin{figure}[t]
+\centering\includegraphics[width=\linewidth]{../figures/query_complexity.pdf}
+\caption{Calibration cost versus separation of two unused effects. Error bars are 95\% bootstrap intervals over 200 replicas. The large separation from full recovery concerns a harder target; entropy/task is a strong baseline and is faster than TDG at this confidence level.}\label{fig:complexity}
+\end{figure}
+
+\begin{table}[t]
+\centering\small\input{table_exact}
+\caption{Mean calibration queries over 200 runs. Means include censoring at the cap; $\dagger$ denotes one censored run. All other cells have 200 certificates. ``Task design / task stop'' is TDG.}\label{tab:exact}
+\end{table}
+
+\paragraph{Full identification is expensive, but task allocation is not universally best.}
+At $\gamma=.01$, TDG uses 78.2 queries on average (95\% bootstrap interval $[74.4,82.3]$), versus 7,817.0 for full/full ($[7,274.0,8,353.4]$). Changing only the stopping objective is helpful but incomplete: full/task uses 625.8. Changing only allocation gives task/full 18,839.6, with one cap hit. These ablations distinguish allocation from stopping. However, entropy/task uses only 64.6 queries, outperforming TDG. TDG produces one incorrect task certificate out of 200 in each nuisance setting; no zero-error claim is made. These observed fractions are below $.05$ but cannot independently validate an anytime guarantee.
+
+\paragraph{Stringent confidence and the all-effects-required control.}
+A separate two-context sweep at $\gamma=.02$ varies $\delta$. At $\delta=.1$, TDG and entropy/task use 64.4 and 55.4 queries; at $\delta=10^{-10}$ they use 224.0 and 375.5. This is consistent with a difference between finite-sample efficiency and an asymptotic design criterion, not proof of the asymptotic limit from finite data. When all four effects are required, task/full alternatives coincide: TDG and full/full are identical sample by sample, with mean 544.6 queries. Entropy/task uses 501.5. The negative control rules out attributing universal superiority to the task label alone.
+
+\paragraph{Estimated kernels and misspecification.}\label{sec:learned}
+For each of five source sample sizes, we generate 20 independent pretrained categorical models from anonymous pure demonstrators: each demonstrator consistently executes one effect, but its executable command label is absent. We estimate each effect kernel by smoothed counts, then run 24 calibration replicas per model, both with and without the oracle log-error correction. This is a deliberately favorable anchor assumption, not unsupervised video representation learning. At 4,096 source transitions per effect, robust calibration certifies only 36.0\% by 3,000 queries; at 65,536 it certifies all runs, averaging 90.6 queries. Uncorrected calibration averages approximately 61 queries but lacks the misspecified-model guarantee. Source sampling costs are reported separately and are not hidden inside the calibration count.
+
+A second stress test mixes calibration kernels with a swap of effects 0 and 1 while leaving deployment unchanged. Strong mixing therefore creates inconsistent semantics across calibration and deployment, not a harmless global relabeling. At mixing weights $.7$ and $1$, uncorrected calibration certifies the wrong task controller in all 200 runs. The corrected rule gives no wrong certificates, but abstains in every nonzero-mixing condition by the cap, including mild shifts. Thus the current robustness result identifies a genuine safety--efficiency tradeoff and does not resolve practical model-error calibration.
+
+\section{Related work and limitations}
+ILPO and LAPO learn latent control representations and map them to executable actions with labeled interaction \citep{edwards2019,schmidt2023}. Identifiability from tagged demonstrators \citep{schur2026}, distractor-induced failures \citep{nikulin2025}, and cross-context effect alignment \citep{jiang2026} constrain when our conditional input model is plausible. We neither replace those representation methods nor claim that a few labels always suffice without their assumptions.
+
+Our fixed-confidence arguments use controlled sensing, information-theoretic identification bounds, and time-uniform likelihood reasoning \citep{nitinawarat2012,kaufmann2016,garivier2016,howard2018}. Task-sufficient stopping is related to identification with multiple correct answers \citep{degenne2019}; our matching rate concerns the unique partial-permutation answer $d_R$, while Equation~\eqref{eq:policy} is only a general validity certificate. Novelty rests on the cycle restriction, structural implications, and grounded model-specific analysis, not these general statistical principles.
+
+The present empirical scope is small finite stochastic systems and learned categorical likelihoods. There is no neural video model, physical robot, online navigation cost, learned task-relevance set, or validated data-dependent robust radius. The implementation enumerates candidate permutations; only the design oracle avoids factorial alternative enumeration. The task family is deliberately structured, so quantitative savings should not be extrapolated to general control interfaces. Independent human proof review and broader representation experiments remain necessary before treating this draft as submission-ready.
+
+\section{Conclusion}
+Minimal grounding is not necessarily complete command identification. In the finite shared-permutation model, its information constraints are exactly the directed cycles that touch task-required effects. This yields a precise account of indirect calibration, task-dependent stopping, and additive costs across independently aligned components. Controlled experiments support the separation from full recovery while exposing strong entropy baselines and the conservatism of robust certification. The next empirical step is to test the same cycle-informed calibration on imperfect latent effects learned from richer observations, without changing the information access or hiding representation failures.
+
+\clearpage
+\section*{Reproducibility and research status}
+The accompanying package contains source code, deterministic seeds, all recorded calibration outcomes, summary tables, figure-generation code, and automated tests. Numerical results were produced by execution. Reported intervals are descriptive bootstrap intervals, not replacements for the analytic correctness guarantee. This is a research draft; its proofs have not yet received independent human review, and no acceptance, peer review, or conference submission is implied by its formatting. The public development repository must be replaced by an anonymized artifact before a double-blind submission.
+
+\section*{AI use statement}
+An OpenAI ChatGPT assistant was used for problem formulation, literature research, theorem and proof drafting, implementation, synthetic experimentation, analysis, and manuscript preparation. The experiments used programmatically sampled synthetic data, not invented numerical observations. Automated tests and an AI-assisted consistency review have been performed; independent human verification of mathematical correctness, novelty, experimental methodology, and citations has not yet been completed. The final human authors must verify and take responsibility for the complete submission and update this statement accordingly.
+
+\section*{Ethics statement}
+The experiments contain no human-subject data or physical deployment. A calibration certificate under a misspecified model should not be interpreted as a physical safety guarantee. The robust experiments explicitly expose conditions in which the method abstains rather than endorsing a controller.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+\clearpage
+\appendix
+\input{proofs}
+\input{experimental_details}
+\end{document}

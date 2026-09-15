@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "/mnt/data/WM-minimal-action/experiments/run_experiments.py",
+    "--suite",
+    "exact"
+  ],
+  "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+  "numpy": "2.3.5",
+  "scipy": "1.17.0",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "config": {
+    "repetitions": 200,
+    "cap": 50000,
+    "pretraining_seeds": 20,
+    "pretraining_repetitions": 24,
+    "suite": "exact",
+    "output": "/mnt/data/WM-minimal-action/results"
+  },
+  "interpretation": "CPU synthetic reset-query experiments; cap is right censoring; exact deployment values, not rollout estimates.",
+  "elapsed_seconds": 19.94650497500004
+}

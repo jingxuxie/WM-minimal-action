@@ -1,0 +1,10 @@
+Source: https://github.com/ICLR/Master-Template/blob/master/iclr2027/iclr2027_conference.sty
+Upstream source blob: f61ad7efce0855557694078c0945e6c33feb8236
+Retrieved through the GitHub connector on 2026-09-15.
+The local style preserves formatting definitions; explanatory comments were compacted.
+The official author's guide links this current distribution:
+https://media.iclr.cc/Conferences/ICLR2027/iclr-2027-style-files.zip
+The paper's development-mode header is changed in main.tex, NOT in the style,
+to avoid claiming that the draft has actually been submitted or accepted.
+Replace the local style with the official unmodified distribution as part of
+final submission preflight. Do not change the official dimensions or fonts.
